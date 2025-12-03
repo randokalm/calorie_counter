@@ -768,19 +768,38 @@ body {
   cursor: pointer;
 }
 
-.date-field {
+.top-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* mobilde her şey sola */
+  gap: 1rem;
+}
+
+/* İstersen büyük ekranlarda yan yana dursun */
+@media (min-width: 768px) {
+  .top-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.date-picker-wrapper {
   width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;   /* hem label hem tarih soldan */
+  align-items: flex-start;   /* label + input solda */
+  text-align: left;
   gap: 0.35rem;
   margin-top: 1.25rem;
   margin-bottom: 0.75rem;
 }
 
-.field-label {
+.date-picker-wrapper .field-label {
   font-size: 0.9rem;
   font-weight: 500;
   color: #e5e7eb;
-  text-align: left;          /* kart genelinde text-align:center olsa bile override eder */
+  text-align: left;
+  align-self: flex-start;
 }
+
