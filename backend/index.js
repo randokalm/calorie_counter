@@ -1,5 +1,6 @@
 // index.js  -- backend using FOOD-DATA-GROUP1-5.csv and serving React build
 
+const { authRouter, authRequired } = require("./authRoutes");
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -7,6 +8,10 @@ const { loadNutrients } = require("./nutrientLoader");
 
 const app = express();
 app.use(cors());
+app.use(express.json()); // JSON body okumak için (özellikle /auth için)
+
+// Auth routes
+app.use("/auth", authRouter);
 
 // ==== FRONTEND BUILD SERVE ====
 // ../frontend/dist klasörünü static olarak sun
