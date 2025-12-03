@@ -784,22 +784,47 @@ body {
   }
 }
 
-.date-picker-wrapper {
-  width: 100%;
+/* ÜST SATIR: masaüstü görünüm */
+.top-row {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;   /* label + input solda */
-  text-align: left;
-  gap: 0.35rem;
-  margin-top: 1.25rem;
-  margin-bottom: 0.75rem;
+  align-items: center;
+  justify-content: space-between; /* yazı solda, tarih bloğu sağda */
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+/* Tarih bloğu: masaüstü */
+.date-picker-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;      /* sağ köşeye it */
 }
 
 .date-picker-wrapper .field-label {
   font-size: 0.9rem;
   font-weight: 500;
   color: #e5e7eb;
-  text-align: left;
-  align-self: flex-start;
+  text-align: right;
+}
+
+/* ===== MOBİL / DAR EKRAN ===== */
+@media (max-width: 768px) {
+  .top-row {
+    flex-direction: column;     /* üst yazı + tarih bloğu alt alta */
+    align-items: stretch;       /* genişlik kart kadar olsun */
+  }
+
+  .date-picker-wrapper {
+    width: 100%;
+    flex-direction: column;     /* Date üstte, input altta */
+    align-items: flex-start;    /* ikisi de search bar gibi sola hizalı */
+    margin-left: 0;             /* sağa itme, arama barıyla aynı hizadan başla */
+  }
+
+  .date-picker-wrapper .field-label {
+    text-align: left;           /* Date yazısı sola yaslı */
+    width: 100%;
+  }
 }
 
