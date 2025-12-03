@@ -11,6 +11,11 @@ import "./App.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "";
 
+// Bugünün tarihini YYYY-MM-DD olarak verir
+function todayString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function App() {
   // ===== AUTH STATE =====
   const [authEmail, setAuthEmail] = useState("");
@@ -27,6 +32,10 @@ function App() {
   const [error, setError] = useState("");
   const [gramsMap, setGramsMap] = useState({});
   const [selectedFood, setSelectedFood] = useState(null);
+
+  // ===== MEALS STATE (for selected date) =====
+  const [selectedDate, setSelectedDate] = useState(todayString());
+  const [meals, setMeals] = useState([]); // backend /api/meals cevabı
 
   // İlk açılışta token ve user'ı localStorage'dan çek
   useEffect(() => {
@@ -130,6 +139,7 @@ function App() {
     setCurrentUser(null);
     localStorage.removeItem("cc_token");
     localStorage.removeItem("cc_user");
+    setMeals([]);
   };
 
   // ===== FOOD SEARCH HANDLERS =====
@@ -175,6 +185,134 @@ function App() {
     searchFoods(query);
   };
 
+  // ===== MEAL HANDLER =====
+
+  const fetchMealsForDate = async (dateStr) => {
+    if (!currentUser || !token) {
+      setMeals([]);
+      return;
+    }
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/meals?date=` + encodeURIComponent(dateStr),
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (!res.ok) {
+        console.error("Fetch meals error:", await res.text());
+        setMeals([]);
+        return;
+      }
+      const data = await res.json();
+      setMeals(data);
+    } catch (err) {
+      console.error("Fetch meals error:", err);
+      setMeals([]);
+    }
+  };
+
+  // Seçili tarih veya login durumu değişince o günü çek
+  useEffect(() => {
+    if (token && currentUser) {
+      fetchMealsForDate(selectedDate);
+    } else {
+      setMeals([]);
+    }
+  }, [selectedDate, token, currentUser]);
+
+  const addMealEntry = async (mealType, food, grams) => {
+    if (!currentUser || !token) {
+      window.location.href = "/auth";
+      return;
+    }
+
+    const gramsNum = Number(grams);
+    if (!Number.isFinite(gramsNum) || gramsNum <= 0) {
+      alert("Please enter a valid grams amount before adding to a meal.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/meals`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          date: selectedDate,
+          mealType, // "breakfast" | "lunch" | "dinner" | "snack" | "other"
+          description: food.description,
+          grams: gramsNum,
+          energyPer100: Number(food.energyKcal),
+          proteinPer100: Number(food.proteinG),
+          fatPer100: Number(food.fatG),
+          carbPer100: Number(food.carbG),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("Add meal error:", data);
+        alert(data.error || "Failed to add meal.");
+        return;
+      }
+
+      alert(
+        `Added to ${mealType}:\n${data.description} – ${data.grams} g, ${
+          data.totals?.calories != null
+            ? data.totals.calories.toFixed(1) + " kcal"
+            : "kcal ?"
+        }`
+      );
+
+      // Günün listesini güncelle
+      fetchMealsForDate(selectedDate);
+    } catch (err) {
+      console.error("Add meal error:", err);
+      alert("Network error while adding meal.");
+    }
+  };
+
+  const deleteMealEntry = async (mealId) => {
+    if (!currentUser || !token) {
+      window.location.href = "/auth";
+      return;
+    }
+
+    if (!window.confirm("Do you want to remove this item from your diary?")) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/meals/${mealId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        // Artık 404 dönmüyoruz ama yine de kontrol dursun
+        const data = await res.json().catch(() => ({}));
+        console.error("Delete meal error:", data);
+        alert(data.error || "Failed to delete meal.");
+        return;
+      }
+
+      // Başarılı silme → mevcut günü yeniden çek
+      fetchMealsForDate(selectedDate);
+    } catch (err) {
+      console.error("Delete meal error:", err);
+      alert("Network error while deleting meal.");
+    }
+  };
+
+
   // ===== RENDER =====
 
   return (
@@ -189,7 +327,6 @@ function App() {
               element={
                 <CaloriePage
                   query={query}
-                  setQuery={setQuery}
                   foods={foods}
                   loading={loading}
                   error={error}
@@ -200,6 +337,11 @@ function App() {
                   getKeyForFood={getKeyForFood}
                   getGramsForFood={getGramsForFood}
                   setGramsForFood={setGramsForFood}
+                  onAddMeal={addMealEntry}
+                  selectedDate={selectedDate}
+                  setSelectedDate={setSelectedDate}
+                  meals={meals}
+                  onDeleteMeal={deleteMealEntry}
                 />
               }
             />
@@ -216,7 +358,6 @@ function App() {
                   authError={authError}
                   handleAuthSubmit={handleAuthSubmit}
                   currentUser={currentUser}
-                  onLogout={handleLogout}
                 />
               }
             />
@@ -227,7 +368,7 @@ function App() {
   );
 }
 
-/* ====== TOP BAR (Calorie Counter solda, Login/Register sağda) ====== */
+/* ====== TOP BAR ====== */
 
 function TopBar({ currentUser, onLogout }) {
   const location = useLocation();
@@ -266,7 +407,7 @@ function TopBar({ currentUser, onLogout }) {
   );
 }
 
-/* ====== AUTH PAGE (/auth) ====== */
+/* ====== AUTH PAGE ====== */
 
 function AuthPage({
   authEmail,
@@ -278,7 +419,6 @@ function AuthPage({
   authError,
   handleAuthSubmit,
   currentUser,
-  onLogout,
 }) {
   const navigate = useNavigate();
 
@@ -362,7 +502,7 @@ function AuthPage({
   );
 }
 
-/* ====== CALORIE PAGE (/) ====== */
+/* ====== CALORIE PAGE ====== */
 
 function CaloriePage({
   query,
@@ -376,6 +516,11 @@ function CaloriePage({
   getKeyForFood,
   getGramsForFood,
   setGramsForFood,
+  onAddMeal,
+  selectedDate,
+  setSelectedDate,
+  meals,
+  onDeleteMeal,
 }) {
   const renderSelectedFoodCard = () => {
     if (!selectedFood) {
@@ -514,18 +659,50 @@ function CaloriePage({
             </span>
           </div>
         </div>
+
+        {/* Add to meal buttons */}
+        <div className="section section-addmeal">
+          <div className="section-heading">Add to meal</div>
+          <div className="meal-buttons">
+            {["breakfast", "lunch", "dinner", "snack", "other"].map(
+              (mealType) => (
+                <button
+                  key={mealType}
+                  type="button"
+                  className="btn btn-meal"
+                  onClick={() => onAddMeal(mealType, food, grams)}
+                >
+                  {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
+                </button>
+              )
+            )}
+          </div>
+        </div>
       </div>
     );
   };
 
+
   return (
     <>
-      <p className="app-subtitle">
-        Start typing (e.g. <code>app</code> for apple). Results update as you
-        type. Click a food on the left and enter grams to see calories and
-        macros.
-      </p>
+      <div className="top-row">
+        <p className="app-subtitle">
+          Start typing (e.g. <code>app</code> for apple). Results update as you
+          type. Click a food on the left and enter grams to see calories and
+          macros.
+        </p>
 
+        <div className="date-picker-wrapper">
+          <span className="field-label">Date</span>
+          <input
+            type="date"
+            className="input input-date-pretty"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+          />
+        </div>
+      </div>
+      
       <form className="search-form" onSubmit={handleSearchSubmit}>
         <input
           type="text"
@@ -538,11 +715,9 @@ function CaloriePage({
           Search
         </button>
       </form>
-
       {loading && <p className="status-text">Loading...</p>}
       {error && <p className="status-text error">{error}</p>}
-
-      <div className="layout">
+      <div className="layout layout-with-summary">
         {/* Left: results list */}
         <div className="results-panel">
           {query.trim() && (
@@ -581,10 +756,137 @@ function CaloriePage({
           )}
         </div>
 
-        {/* Right: details */}
+        {/* Middle: details */}
         <div className="detail-panel">{renderSelectedFoodCard()}</div>
+
+        {/* Right: daily summary */}
+        <DailySummaryPanel
+          date={selectedDate}
+          meals={meals}
+          onDeleteMeal={onDeleteMeal}
+        />
       </div>
     </>
+  );
+}
+
+/* ====== DAILY SUMMARY PANEL ====== */
+
+function DailySummaryPanel({ date, meals, onDeleteMeal }) {
+  // meals: array of { mealType, description, grams, totals: { calories, protein, fat, carbs } }
+
+  const groups = {
+    breakfast: [],
+    lunch: [],
+    dinner: [],
+    snack: [],
+    other: [],
+  };
+
+  const dailyTotals = {
+    calories: 0,
+    protein: 0,
+    fat: 0,
+    carbs: 0,
+  };
+
+  for (const m of meals || []) {
+    const mt = m.mealType;
+    if (!groups[mt]) groups[mt] = [];
+    groups[mt].push(m);
+
+    const t = m.totals || {};
+    dailyTotals.calories += Number(t.calories || 0);
+    dailyTotals.protein += Number(t.protein || 0);
+    dailyTotals.fat += Number(t.fat || 0);
+    dailyTotals.carbs += Number(t.carbs || 0);
+  }
+
+  const hasAnyMeals = meals && meals.length > 0;
+
+  const formatKcal = (v) => Math.round(Number(v || 0));
+
+  const formatGrams = (v) => Number(v || 0).toFixed(1);
+
+  return (
+    <div className="summary-panel">
+      <div className="summary-header">
+        <div className="summary-title">Daily summary</div>
+        <div className="summary-date">{date}</div>
+      </div>
+
+      {!hasAnyMeals && (
+        <div className="summary-empty">
+          No meals recorded for this date yet.
+          <br />
+          Add foods to Breakfast, Lunch, Dinner, Snack or Other to see them
+          here.
+        </div>
+      )}
+
+      {hasAnyMeals && (
+        <>
+          <div className="summary-card summary-total-card">
+            <div className="summary-total-row">
+              <span>Total calories</span>
+              <span className="value-strong">
+                {formatKcal(dailyTotals.calories)} kcal
+              </span>
+            </div>
+            <div className="summary-total-macros">
+              <span>Protein: {formatGrams(dailyTotals.protein)} g</span>
+              <span>Fat: {formatGrams(dailyTotals.fat)} g</span>
+              <span>Carbs: {formatGrams(dailyTotals.carbs)} g</span>
+            </div>
+          </div>
+
+          <div className="summary-meals">
+            {["breakfast", "lunch", "dinner", "snack", "other"].map(
+              (mealType) => {
+                const items = groups[mealType] || [];
+                if (items.length === 0) return null;
+
+                const title =
+                  mealType.charAt(0).toUpperCase() + mealType.slice(1);
+
+                return (
+                  <div
+                    key={mealType}
+                    className="summary-card summary-meal-card"
+                  >
+                    <div className="summary-meal-title">{title}</div>
+                    <ul className="summary-meal-list">
+                      {items.map((m) => (
+                        <li key={m.id} className="summary-meal-item">
+                          <div className="summary-meal-desc">
+                            {m.description}
+                          </div>
+                          <div className="summary-meal-meta">
+                            <span>{m.grams} g</span>
+                            {m.totals?.calories != null && (
+                              <span>{formatKcal(m.totals.calories)} kcal</span>
+                            )}
+                            {onDeleteMeal && (
+                              <button
+                                type="button"
+                                className="summary-meal-delete"
+                                onClick={() => onDeleteMeal(m.id)}
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              }
+            )}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

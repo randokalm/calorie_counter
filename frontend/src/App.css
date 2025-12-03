@@ -518,3 +518,253 @@ body {
   font-size: 0.85rem;
   color: var(--text-muted);
 }
+.section-addmeal {
+  margin-top: 16px;
+}
+
+.meal-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.btn-meal {
+  background-color: rgba(15, 23, 42, 0.9);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease, transform 0.08s ease;
+}
+
+.btn-meal:hover {
+  background-color: var(--accent-soft);
+  border-color: var(--accent-soft);
+  color: #f9fafb;
+  transform: translateY(-1px);
+}
+/* === Date picker row === */
+
+.top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.date-picker-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.input-date {
+  min-width: 150px;
+}
+
+/* === Layout with summary (3 kolon) === */
+
+.layout-with-summary {
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1.4fr) minmax(260px, 0.9fr);
+}
+
+/* === Daily summary panel === */
+
+.summary-panel {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background-color: var(--bg-soft);
+  padding: 10px 12px 12px;
+  max-height: 520px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.summary-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.summary-date {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.summary-empty {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+.summary-card {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background-color: rgba(15, 23, 42, 0.85);
+  padding: 8px 10px;
+  margin-top: 8px;
+}
+
+.summary-total-card {
+  margin-top: 4px;
+}
+
+.summary-total-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+}
+
+.summary-total-macros {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 0.82rem;
+  margin-top: 4px;
+  color: var(--text-muted);
+}
+
+.summary-meals {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.summary-meal-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.summary-meal-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.summary-meal-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  padding: 2px 0;
+}
+
+.summary-meal-desc {
+  max-width: 60%;
+}
+
+.summary-meal-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  color: var(--text-muted);
+}
+.summary-meal-delete {
+  margin-top: 2px;
+  border: none;
+  background: transparent;
+  color: #fca5a5;
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.summary-meal-delete:hover {
+  color: #fecaca;
+}
+
+
+/* Add-to-meal buttons (zaten eklemiştik ama yoksa) */
+
+.section-addmeal {
+  margin-top: 16px;
+}
+
+.meal-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.btn-meal {
+  background-color: rgba(15, 23, 42, 0.9);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease, transform 0.08s ease;
+}
+
+.btn-meal:hover {
+  background-color: var(--accent-soft);
+  border-color: var(--accent-soft);
+  color: #f9fafb;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 1100px) {
+  .layout-with-summary {
+    grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  }
+
+  .summary-panel {
+    margin-top: 10px;
+    grid-column: 1 / -1;
+  }
+
+  .top-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .date-picker-wrapper {
+    align-items: flex-start;
+  }
+}
+
+.date-picker-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.input-date-pretty {
+  font-family: inherit;
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  min-width: 140px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: radial-gradient(circle at top left, #1f2937, #020617);
+  color: #e5e7eb;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.7);
+  cursor: pointer;
+}
+
+.input-date-pretty:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.7);
+}
+
+.input-date-pretty::-webkit-calendar-picker-indicator {
+  filter: invert(0.9);
+  cursor: pointer;
+}
+

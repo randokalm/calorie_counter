@@ -1,10 +1,13 @@
 // index.js  -- backend using FOOD-DATA-GROUP1-5.csv and serving React build
 
-const { authRouter, authRequired } = require("./authRoutes");
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const { loadNutrients } = require("./nutrientLoader");
+const { authRouter, authRequired } = require("./authRoutes");
+const { mealsRouter } = require("./mealsRoutes");
+const { initDb } = require("./db");
 
 const app = express();
 app.use(cors());
@@ -12,6 +15,8 @@ app.use(express.json()); // JSON body okumak için (özellikle /auth için)
 
 // Auth routes
 app.use("/auth", authRouter);
+// Meals: sadece login olmuş kullanıcılar erişebilir
+app.use("/api/meals", authRequired, mealsRouter);
 
 // ==== FRONTEND BUILD SERVE ====
 // ../frontend/dist klasörünü static olarak sun
@@ -49,6 +54,9 @@ app.get("/api/foods", (req, res) => {
 // ==== INIT ====
 
 async function init() {
+  // 🔹 Eksik olan satır buydu: DB tablolarını hazırla
+  await initDb();
+
   foods = await loadNutrients();
   console.log("Foods loaded from nutrient CSV files:", foods.length);
 

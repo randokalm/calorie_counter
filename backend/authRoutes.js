@@ -1,24 +1,19 @@
-// authRoutes.js
+// authRoutes.js - PostgreSQL tabanlı auth
 const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { pool } = require("./db");
 
 const router = express.Router();
 
-// Normalde bunlar DB'de olur; şimdilik RAM'de bir array.
-const users = []; // { id, email, passwordHash }
-
-// TOKEN için secret - gerçekte .env'den gelmeli
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-this";
 const JWT_EXPIRES_IN = "7d";
 
-// Küçük yardımcı: email valid mi
 function isValidEmail(email) {
   return /\S+@\S+\.\S+/.test(email);
 }
 
-// --- POST /auth/register ---
-// body: { email, password }
+// POST /auth/register
 router.post("/register", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -37,42 +32,49 @@ router.post("/register", async (req, res) => {
         .json({ error: "Password must be at least 6 characters." });
     }
 
-    const existing = users.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase()
-    );
-    if (existing) {
-      return res
-        .status(409)
-        .json({ error: "This email is already registered." });
+    const client = await pool.connect();
+    try {
+      // email var mı?
+      const existing = await client.query(
+        "SELECT id FROM users WHERE LOWER(email) = LOWER($1)",
+        [email]
+      );
+      if (existing.rows.length > 0) {
+        return res
+          .status(409)
+          .json({ error: "This email is already registered." });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      const insert = await client.query(
+        "INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email",
+        [email, passwordHash]
+      );
+
+      const newUser = insert.rows[0];
+
+      const token = jwt.sign(
+        { userId: newUser.id, email: newUser.email },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+      );
+
+      res.status(201).json({
+        message: "User registered successfully.",
+        token,
+        user: { id: newUser.id, email: newUser.email },
+      });
+    } finally {
+      client.release();
     }
-
-    const passwordHash = await bcrypt.hash(password, 10);
-    const newUser = {
-      id: users.length + 1,
-      email,
-      passwordHash,
-    };
-    users.push(newUser);
-
-    const token = jwt.sign(
-      { userId: newUser.id, email: newUser.email },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
-    );
-
-    res.status(201).json({
-      message: "User registered successfully.",
-      token,
-      user: { id: newUser.id, email: newUser.email },
-    });
   } catch (err) {
     console.error("Register error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// --- POST /auth/login ---
-// body: { email, password }
+// POST /auth/login
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -83,35 +85,45 @@ router.post("/login", async (req, res) => {
         .json({ error: "Email and password are required." });
     }
 
-    const user = users.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase()
-    );
-    if (!user) {
-      return res.status(401).json({ error: "Invalid credentials." });
+    const client = await pool.connect();
+    try {
+      const result = await client.query(
+        "SELECT id, email, password_hash FROM users WHERE LOWER(email) = LOWER($1)",
+        [email]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(401).json({ error: "Invalid credentials." });
+      }
+
+      const user = result.rows[0];
+
+      const ok = await bcrypt.compare(password, user.password_hash);
+      if (!ok) {
+        return res.status(401).json({ error: "Invalid credentials." });
+      }
+
+      const token = jwt.sign(
+        { userId: user.id, email: user.email },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+      );
+
+      res.json({
+        message: "Login successful.",
+        token,
+        user: { id: user.id, email: user.email },
+      });
+    } finally {
+      client.release();
     }
-
-    const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) {
-      return res.status(401).json({ error: "Invalid credentials." });
-    }
-
-    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN,
-    });
-
-    res.json({
-      message: "Login successful.",
-      token,
-      user: { id: user.id, email: user.email },
-    });
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// --- Middleware: JWT doğrulama ---
-// Bunu daha sonra "kişiye özel öğünler" için kullanacağız
+// JWT middleware aynı kalıyor
 function authRequired(req, res, next) {
   const authHeader = req.headers.authorization || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
@@ -129,7 +141,6 @@ function authRequired(req, res, next) {
   }
 }
 
-// Bu middleware'i dışarı da export edelim
 module.exports = {
   authRouter: router,
   authRequired,
